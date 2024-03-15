@@ -1,5 +1,30 @@
-version: '1.0'
+version: '2.0'
 services:
-  front:
+  telegram_bot:
       build: ./telegram_bot/
       restart: always
+      depends_on:
+        mysql:
+          condition: service_healthy
+  mysql:
+      image: mysql:latest
+      restart: always
+      #command: --default-authentication-plugin=mysql_native_password
+      environment:
+          MYSQL_HOST: mysql
+          MYSQL_DATABASE: my_db
+          MYSQL_ROOT_PASSWORD: 'root'
+      healthcheck:
+          test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+          timeout: 3s
+          retries: 20
+      ports:
+          - '3306:3306'
+  flyway:
+    image: flyway/flyway:latest
+    volumes:
+      - "./MySQL/migrations:/flyway/sql"
+    command: -url=jdbc:mysql://mysql:3306/my_db?allowPublicKeyRetrieval=true -user=root -password=root migrate
+    depends_on:
+        mysql:
+            condition: service_healthy
