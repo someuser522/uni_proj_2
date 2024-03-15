@@ -102,6 +102,73 @@ def stats_handler(message):
         query_id = asyncio.run(update_query_stats(query))
         asyncio.run(update_user_query_stats(user_id, query_id))
 
+async def fetch_global_stats():
+    """get stats overall usage of queries"""
+    conn = await create_db_connection()
+    stats = []
+    async with conn.cursor() as cursor:
+        await cursor.execute("""
+            SELECT query_txt, SUM(times_used) as total_usage
+            FROM query_stats
+            GROUP BY query_txt
+            ORDER BY total_usage DESC
+            LIMIT 5
+        """)
+        stats = await cursor.fetchall()
+    conn.close()
+    return stats
+
+async def send_global_stats(message):
+    """print stats overall usage of queries"""
+    stats = await fetch_global_stats()
+    reply = "Top 5 Queries Overall:\n" + "\n".join([f"{i+1}. {row[0]} - {row[1]} times" for i, row in enumerate(stats)])
+    bot.reply_to(message, reply)
+
+async def get_user_stats_by_username(username):
+    conn = await create_db_connection()
+    
+    # Find the user_id for the given username
+    user_id = None
+    async with conn.cursor() as cursor:
+        await cursor.execute("""
+            SELECT user_id FROM bot_users WHERE username = %s
+        """, (username,))
+        user_result = await cursor.fetchone()
+        if user_result:
+            user_id = user_result[0]
+        else:
+            return f"No stats found for username: {username}"
+    
+    # Fetch the top 5 queries made by this user
+    if user_id:
+        async with conn.cursor() as cursor:
+            await cursor.execute("""
+                SELECT qs.query_txt, uqs.query_count
+                FROM user_query_stats uqs
+                JOIN query_stats qs ON uqs.query_id = qs.query_id
+                WHERE uqs.user_id = %s
+                ORDER BY uqs.query_count DESC
+                LIMIT 5
+            """, (user_id,))
+            queries = await cursor.fetchall()
+            
+            if queries:
+                stats_message = f"Top queries for {username}:\n"
+                for i, (query_txt, query_count) in enumerate(queries, start=1):
+                    stats_message += f"{i}. {query_txt} - {query_count} times\n"
+                return stats_message
+            else:
+                return f"No queries found for user: {username}"
+    else:
+        return "User not found."
+
+    conn.close()
+
+async def show_user_stats(message, username):
+    stats_message = await get_user_stats_by_username(username)
+    bot.reply_to(message, stats_message)
+
+
 # Command handler for search grammar
 @bot.message_handler(commands=['search'])
 def search_grammar(message):
@@ -110,22 +177,31 @@ def search_grammar(message):
     if not query:
         bot.reply_to(message, "Please send a query along with the command, for example: /search smth")
         return
-    grammar_rule = f"Search result for '{query}': ..."  # Placeholder
+    grammar_rule = f"Search result for '{query}': ..."  # to do ....
     bot.reply_to(message, grammar_rule)
 
 # Command handler for rule of the day
 @bot.message_handler(commands=['ruleofday'])
 def rule_of_the_day(message):
     stats_handler(message)
-    rule = "Rule of the day: ..."  # Placeholder
+    rule = "Rule of the day: ..."  # to do later...
     bot.reply_to(message, rule)
+
+@bot.message_handler(commands=['stats'])
+def stats_command(message):
+    username = message.text.split(maxsplit=1)[1] if len(message.text.split(maxsplit=1)) > 1 else ''
+    if username:
+        # Fetch and send user-specific stats
+        asyncio.run(show_user_stats(message, username))
+    else:
+        # Fetch and send global stats
+        asyncio.run(send_global_stats(message))
 
 # Handler for all other messages
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
     stats_handler(message)
     bot.reply_to(message, "Write /search <query> to search for a rule or /ruleofday to get the rule of the day.")
-
 
 # Start polling
 if __name__ == '__main__':
