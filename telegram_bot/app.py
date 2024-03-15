@@ -3,7 +3,9 @@ import logging
 import os
 import asyncio
 import aiomysql
+
 from dotenv import load_dotenv
+from api_integration import search_examples
 
 load_dotenv()
 
@@ -177,8 +179,15 @@ def search_grammar(message):
     if not query:
         bot.reply_to(message, "Please send a query along with the command, for example: /search smth")
         return
-    grammar_rule = f"Search result for '{query}': ..."  # to do ....
-    bot.reply_to(message, grammar_rule)
+    
+    result = search_examples(query)
+    if result:
+        if isinstance(result, str):
+            bot.reply_to(message, result)  # error alert
+        else:
+            bot.send_photo(message.chat.id, result['image_url'], caption=result['content'])
+    else:
+        bot.reply_to(message, "Немає результатів за вашим запитом.")
 
 # Command handler for rule of the day
 @bot.message_handler(commands=['ruleofday'])
@@ -203,7 +212,7 @@ def echo_all(message):
     stats_handler(message)
     bot.reply_to(message, "Write /search <query> to search for a rule or /ruleofday to get the rule of the day.")
 
-# Start polling
+
 if __name__ == '__main__':
     try:
         print('Bot started!')
