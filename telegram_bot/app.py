@@ -206,6 +206,19 @@ def stats_command(message):
         # Fetch and send global stats
         asyncio.run(send_global_stats(message))
 
+@bot.message_handler(commands=['help'])
+def send_help(message):
+    help_text = """
+Команди, які я розумію:
+/help - отримати це повідомлення з інструкціями.
+/search <запит> - шукати інформацію за вашим запитом.
+/stats <username> - показати статистику запитів для конкретного користувача.
+/stats - показати статистику запитів загалом.
+
+Просто надішліть мені команду, і я постараюся допомогти!
+"""
+    bot.reply_to(message, help_text)
+
 # Handler for all other messages
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
