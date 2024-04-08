@@ -1,4 +1,5 @@
-version: '2.0'
+version: '3.0'
+
 services:
   telegram_bot:
       build: ./telegram_bot/
@@ -6,12 +7,13 @@ services:
       depends_on:
         mysql:
           condition: service_healthy
+      volumes:
+        - data_volume:/var/log/myapp  # Mount point for logging inside the telegram_bot container
+
   mysql:
       image: mysql:latest
       restart: always
-      #command: --default-authentication-plugin=mysql_native_password
       environment:
-          MYSQL_HOST: mysql
           MYSQL_DATABASE: my_db
           MYSQL_ROOT_PASSWORD: 'root'
       healthcheck:
@@ -20,6 +22,9 @@ services:
           retries: 20
       ports:
           - '3306:3306'
+      volumes:
+          - data_volume:/var/lib/mysql  # Persistent storage for MySQL
+          
   flyway:
     image: flyway/flyway:latest
     volumes:
@@ -28,3 +33,7 @@ services:
     depends_on:
         mysql:
             condition: service_healthy
+
+volumes:
+  data_volume:
+    driver: local
