@@ -14,7 +14,7 @@ bot = telebot.TeleBot(os.getenv('API_KEY'))
 log_file_path = os.getenv('log_file_path') 
 
 DB_CONFIG = {
-    'host': 'localhost', #'#os.getenv('db_host'),
+    'host': os.getenv('db_host'),
     'user': os.getenv('db_user'),
     'password': os.getenv('db_password'),
     'db': os.getenv('db_database'),
@@ -39,6 +39,7 @@ def setup_logging():
 
 
 def update_stats_in_db(query):
+    logging.info("update_stats_in_db")
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
         cursor = connection.cursor()
@@ -104,7 +105,6 @@ def extract_query_and_param(message):
 @bot.message_handler(commands=['search'])
 def search_grammar(message):
     query_command, query_param = extract_query_and_param(message)
-    
     if query_param is None: # nothing to query, quit.
         bot.reply_to(message, "Please send a query along with the command, for example: /search smth")
         return
@@ -115,6 +115,7 @@ def search_grammar(message):
             bot.send_photo(message.chat.id, response['image'], caption=response['content'])
         else:
             bot.reply_to(message, "На жаль не маю що відповісти =(")
+
 
 @bot.message_handler(commands=['stats'])
 def stats_command(message):
@@ -138,17 +139,40 @@ def send_help(message):
     bot.reply_to(message, help_text)
 
 
-async def main():
-    listener = setup_logging()
+def get_record_count():
     try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        cursor = connection.cursor()
+     
+        query = "SELECT COUNT(*) FROM api_data"
+        cursor.execute(query)
+        record_count = cursor.fetchone()[0]
+        return record_count
+
+    except mysql.connector.Error as error:
+        logging.info("Error while connecting to MySQL", error)
+        return None
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+async def main():
+    setup_logging()
+    try:
+        data_size = get_record_count()
+        if data_size is None:
+            logging.info("calling fetch_api_data_in_database...")
+            fetch_api_data_in_database()
+        else:
+            logging.info("data exist, there is no necessity to download it again...")
+
         logging.info("Bot is polling...")
         await bot.polling(none_stop=True)
     except Exception as e:
         logging.error(e)
-    finally:
-        listener.stop()
 
 
 if __name__ == '__main__':
-    #fetch_api_data_in_database()
     asyncio.run(main())

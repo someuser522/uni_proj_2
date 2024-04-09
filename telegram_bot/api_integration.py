@@ -10,7 +10,7 @@ base_url = "http://ukr-mova.in.ua/"
 params = {  "route": "examples", }
 headers = {   'User-Agent': 'Mozilla/4.0 (compatible; IBM PC XT; MS-DOS 5.0) VintageBrowser/1.0'    }
 DB_CONFIG = {
-    'host': 'localhost', #'#os.getenv('db_host'),
+    'host': os.getenv('db_host'),
     'user': os.getenv('db_user'),
     'password': os.getenv('db_password'),
     'db': os.getenv('db_database'),
@@ -48,7 +48,6 @@ def fetch_api_data_in_database():
                 record = (example['title'], remove_html_tags(example['content']), example['uri'], example['image'])
                 records.append(record)
                 add_records_from_api_to_db(records)
-            
         else:
             return "Помилка при отриманні даних з API."
     except Exception as e:
@@ -89,6 +88,7 @@ def fulltext_search_by_title(query):
 
 
 if __name__ == '__main__':                  #for test/example purposes only
-    search_query = "викладач"
-    matching_records = fulltext_search_by_title(search_query)
-    print(matching_records)
+    pass
+    #search_query = "викладач"
+    #matching_records = fulltext_search_by_title(search_query)
+    #print(matching_records)

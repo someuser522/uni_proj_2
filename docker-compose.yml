@@ -1,4 +1,4 @@
-version: '3.0'
+version: '4.0'
 
 services:
   telegram_bot:
@@ -34,6 +34,23 @@ services:
         mysql:
             condition: service_healthy
 
+  front:
+      build: ./front/
+      restart: always
+      depends_on:
+        mysql:
+          condition: service_healthy
+      ports:
+        - '5000:5000'
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"  # Web interface
+      - "1025:1025"  # SMTP server
+    restart: always
+        
 volumes:
   data_volume:
     driver: local

@@ -1,7 +1,7 @@
-CREATE TABLE IF NOT EXISTS V1__users(
+CREATE TABLE IF NOT EXISTS app_users(
     user_id BIGINT NOT NULL,
-    pass varchar(100),
-    email varchar(100),
-    email_verified varchar(100),
+    user_password VARCHAR(100),
+    email VARCHAR(100) UNIQUE NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (user_id)
 );
